@@ -1,0 +1,69 @@
+# VaultScan
+
+**Offline PII leak scanner for freelance devs and small agencies.**
+
+VaultScan scans a codebase, a folder of documents, or a database dump for
+personally identifiable information (PII) — Aadhaar, PAN, phone numbers,
+emails, addresses, API keys — and produces a data inventory plus a
+client-ready "DPDP readiness" report. **Everything runs on your machine.**
+No file, path, or snippet ever leaves the laptop.
+
+> Status: early development. Nothing here works yet.
+
+## Why this exists
+
+Freelancers and small agencies in India are increasingly asked by clients to
+sign data-protection clauses under the DPDP Act. Enterprise DLP tools cost
+more than a freelancer's monthly income. Cloud-based scanners require
+uploading the exact data you're trying to protect.
+
+VaultScan is the local-first alternative: run one command, get a report you
+can hand to a client, keep your files where they are.
+
+## How it works
+
+1. **Deterministic validators first.** Regex + checksum validation
+   (Aadhaar Verhoeff, PAN format, phone/email patterns, common API-key
+   shapes) catch what can be caught with certainty. Fast, auditable, no
+   model needed.
+2. **Local open-weight model second (Gemma via Ollama).** Used only for
+   what regex can't do: reading source code to map where personal data
+   flows, separating real customer data from test fixtures, and drafting
+   the data inventory and the client-facing readiness report.
+3. **Nothing leaves the machine.** No network calls at scan time. You can
+   unplug the network cable and VaultScan still works.
+
+## What VaultScan is NOT
+
+- It is **not** a compliance certification.
+- It does **not** claim your project is "DPDP compliant."
+- It does **not** replace a lawyer, a DPO, or a formal audit.
+
+It produces a *readiness* report — a starting point for a conversation with
+your client or your CA. Any wording in the generated report that implies
+guaranteed compliance is a bug; please file it.
+
+## Requirements (planned)
+
+- Python 3.11+
+- Ollama running locally with a Gemma model
+- Linux/macOS (Windows untested)
+
+## Install (planned)
+
+Not published yet. Clone and run from source once Task 2 lands.
+
+## Usage (planned)
+
+    vaultscan scan ./my-client-project
+    vaultscan report --format pdf
+
+## License
+
+MIT. See LICENSE.
+
+## Disclaimer
+
+VaultScan is a developer tool. Its output is informational only and does not
+constitute legal advice or a compliance certification. You are responsible
+for how you use and share its reports.
