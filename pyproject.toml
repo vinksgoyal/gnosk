@@ -23,6 +23,7 @@ classifiers = [
 dependencies = [
   "typer>=0.12",
   "rich>=13.7",
+  "ollama>=0.4",
 ]
 
 [project.optional-dependencies]
