@@ -74,3 +74,22 @@ class TestFindCandidates:
 
     def test_rejects_non_string(self):
         assert find_aadhaar_candidates(None) == []  # type: ignore[arg-type]
+
+
+class TestAadhaarScan:
+    def test_valid_aadhaar_is_full_confidence(self):
+        from vaultscan.validators import aadhaar
+
+        [f] = aadhaar.scan("ID: 234567890124")
+        assert f.category == "aadhaar"
+        assert f.validator == "aadhaar.verhoeff"
+        assert f.source == "validator"
+        assert f.confidence == 1.0
+        assert f.notes is None
+
+    def test_checksum_failure_is_low_confidence(self):
+        from vaultscan.validators import aadhaar
+
+        [f] = aadhaar.scan("ID: 234567890123")
+        assert f.confidence == 0.3
+        assert f.notes is not None and "near-miss" in f.notes
