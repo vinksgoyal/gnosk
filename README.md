@@ -46,8 +46,15 @@ guaranteed compliance is a bug; please file it.
 ## Requirements (planned)
 
 - Python 3.11+
-- Ollama running locally with a Gemma model
+- [Ollama](https://ollama.com) running locally
+- A Gemma model pulled. Tested on `gemma2:2b` (1.6 GB); a 4B or larger
+  model is recommended if your machine has the RAM and cores for it.
+- At least 8 GB RAM; the model runs on CPU, no GPU required.
 - Linux/macOS (Windows untested)
+
+Run `python scripts/verify_ollama.py` to confirm the model is reachable
+before using any model-dependent commands.
+
 
 ## Install (planned)
 
