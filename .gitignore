@@ -36,3 +36,4 @@ sample_data/private/
 *.swp
 .DS_Store
 Thumbs.db
+NOTES.md
