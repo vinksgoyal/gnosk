@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 import typer
@@ -11,7 +12,13 @@ from rich.console import Console
 from gnosk import __version__
 from gnosk.classifier import classify_findings
 from gnosk.report import build_inventory, redact
-from gnosk.scanner import scan_path
+from gnosk.scanner import FileFindings, scan_path
+from gnosk.ui import (
+    color_for,
+    is_first_run,
+    mark_seen,
+    print_banner,
+)
 
 app = typer.Typer(
     name="gnosk",
@@ -42,6 +49,47 @@ def main(
     """Gnosk — local-first PII scanner."""
 
 
+def _collect_scan(path: Path) -> tuple[list[FileFindings], float]:
+    """Walk `path`, showing a spinner while it runs. Returns (results, elapsed)."""
+    results: list[FileFindings] = []
+    t0 = time.monotonic()
+    with console.status("[dim]scanning…[/dim]", spinner="dots") as status:
+        for r in scan_path(path):
+            results.append(r)
+            status.update(f"[dim]scanning… {len(results)} file(s)[/dim]")
+    return results, time.monotonic() - t0
+
+
+def _print_summary(
+    path: Path,
+    results: list[FileFindings],
+    elapsed: float,
+    by_category: dict[str, int],
+) -> None:
+    total = sum(by_category.values())
+    check = "[green]✓[/green]" if not total else "[yellow]![/yellow]"
+    console.print(
+        f"{check} Scanned [bold]{len(results)}[/bold] file(s) "
+        f"in [bold]{elapsed:.2f}s[/bold]"
+    )
+    console.print(f"  Found [bold]{total}[/bold] finding(s)")
+    console.print()
+
+    if by_category:
+        for cat in sorted(by_category):
+            color = color_for(cat)
+            console.print(f"  [{color}]{cat:<10}[/{color}]  {by_category[cat]}")
+        console.print()
+
+    if is_first_run():
+        console.print(
+            f"  [dim]▸ Write a client-ready inventory:  "
+            f"gnosk report {path}[/dim]"
+        )
+        console.print()
+        mark_seen()
+
+
 @app.command()
 def scan(
     path: Path = typer.Argument(..., help="File or directory to scan."),
@@ -56,36 +104,31 @@ def scan(
         console.print(f"[red]Path not found:[/red] {path}")
         raise typer.Exit(code=1)
 
-    files_scanned = 0
-    total = 0
-    by_category: dict[str, int] = {}
-    verdicts: dict[str, int] = {}
+    print_banner(console, __version__)
 
-    for result in scan_path(path):
-        files_scanned += 1
-        for f in result.findings:
-            total += 1
+    results, elapsed = _collect_scan(path)
+
+    by_category: dict[str, int] = {}
+    for r in results:
+        for f in r.findings:
             by_category[f.category] = by_category.get(f.category, 0) + 1
 
-        if classify and result.findings:
-            text = result.path.read_text(errors="replace")
-            console.print(
-                f"[dim]Classifying {result.count} finding(s) in {result.path}...[/dim]"
-            )
-            for cf in classify_findings(str(result.path), text, result.findings):
-                verdicts[cf.verdict] = verdicts.get(cf.verdict, 0) + 1
+    _print_summary(path, results, elapsed, by_category)
 
-    console.print(f"Scanned [bold]{files_scanned}[/bold] file(s).")
-    console.print(f"Found [bold]{total}[/bold] finding(s).")
-    if by_category:
-        console.print()
-        for cat in sorted(by_category):
-            console.print(f"  {cat}: {by_category[cat]}")
-    if verdicts:
-        console.print()
-        console.print("[bold]Classifier verdicts:[/bold]")
-        for v in sorted(verdicts):
-            console.print(f"  {v}: {verdicts[v]}")
+    if classify:
+        verdicts: dict[str, int] = {}
+        for r in results:
+            if not r.findings:
+                continue
+            console.print(f"[dim]classifying {r.count} finding(s) in {r.path}…[/dim]")
+            text = r.path.read_text(errors="replace")
+            for cf in classify_findings(str(r.path), text, r.findings):
+                verdicts[cf.verdict] = verdicts.get(cf.verdict, 0) + 1
+        if verdicts:
+            console.print()
+            console.print("[bold]Classifier verdicts:[/bold]")
+            for v in sorted(verdicts):
+                console.print(f"  {v}: {verdicts[v]}")
 
 
 @app.command()
@@ -103,14 +146,15 @@ def report(
         console.print(f"[red]Path not found:[/red] {path}")
         raise typer.Exit(code=1)
 
-    console.print(f"Scanning [bold]{path}[/bold] ...")
-    results = list(scan_path(path))
+    print_banner(console, __version__)
+    console.print(f"Scanning [bold]{path}[/bold] …")
+
+    results, elapsed = _collect_scan(path)
 
     md = build_inventory(results, project_path=str(path))
     output.write_text(md)
-    console.print(f"Wrote markdown: [bold]{output}[/bold]")
+    console.print(f"[green]✓[/green] Wrote markdown: [bold]{output}[/bold]")
 
-    # Raw JSON alongside, with values redacted so the JSON is safe to share.
     json_path = output.with_suffix(".json")
     payload = {
         "project_path": str(path),
@@ -133,7 +177,8 @@ def report(
         ],
     }
     json_path.write_text(json.dumps(payload, indent=2))
-    console.print(f"Wrote JSON: [bold]{json_path}[/bold]")
+    console.print(f"[green]✓[/green] Wrote JSON: [bold]{json_path}[/bold]")
+    console.print(f"  [dim]({elapsed:.2f}s)[/dim]")
 
 
 if __name__ == "__main__":

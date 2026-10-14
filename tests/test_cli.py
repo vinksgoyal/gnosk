@@ -3,11 +3,18 @@
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from gnosk.cli import app
 
 runner = CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_config(tmp_path, monkeypatch):
+    """Keep the first-run marker out of the user's real home dir."""
+    monkeypatch.setenv("GNOSK_CONFIG_DIR", str(tmp_path / "gnosk-cfg"))
 
 
 def test_version_flag() -> None:
