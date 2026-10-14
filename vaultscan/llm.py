@@ -14,19 +14,19 @@ from __future__ import annotations
 
 import json
 import os
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FutureTimeoutError
 from typing import Any
 
 import ollama
 
 DEFAULT_MODEL = os.environ.get("VAULTSCAN_MODEL", "gemma2:2b")
-DEFAULT_TIMEOUT_S = 180.0
+DEFAULT_TIMEOUT_S = float(os.environ.get("VAULTSCAN_TIMEOUT_S", "120"))
+DEFAULT_NUM_PREDICT = int(os.environ.get("VAULTSCAN_NUM_PREDICT", "400"))
+DEFAULT_NUM_CTX = int(os.environ.get("VAULTSCAN_NUM_CTX", "2048"))
+
 _RETRY_SUFFIX = (
-    "\n\nYour previous response was not valid JSON. "
-    "Respond with ONLY a single JSON object. "
-    "No prose, no markdown fences, no explanation. "
-    "If you cannot answer, respond with {\"error\": \"<short reason>\"}."
+    "\n\nPrevious response was not valid JSON. "
+    "Respond with ONLY one JSON object. No prose, no fences. "
+    'If you cannot answer, respond with {"error": "<reason>"}.'
 )
 
 
@@ -34,17 +34,27 @@ class LLMError(RuntimeError):
     """Raised when the model fails to produce parseable JSON after retries."""
 
 
-def _call_model(prompt: str, model: str) -> str:
+def _client(timeout: float) -> ollama.Client:
+    # ollama-python exposes `timeout` on Client. This gives us a real
+    # HTTP-level timeout — no dangling threads on cancellation.
+    return ollama.Client(timeout=timeout)
+
+
+def _call_model(prompt: str, model: str, timeout: float) -> str:
     """Thin wrapper around ollama.generate.
 
-    This is the seam that tests monkeypatch. Everything above this line is
-    pure logic; everything below is I/O.
+    This is the seam that tests monkeypatch. Everything above is pure
+    logic; everything below is I/O.
     """
-    response = ollama.generate(
+    response = _client(timeout).generate(
         model=model,
         prompt=prompt,
         format="json",
-        options={"temperature": 0.1},
+        options={
+            "temperature": 0.1,
+            "num_ctx": DEFAULT_NUM_CTX,
+            "num_predict": DEFAULT_NUM_PREDICT,
+        },
     )
     if isinstance(response, dict):
         return response.get("response", "")
@@ -52,9 +62,7 @@ def _call_model(prompt: str, model: str) -> str:
 
 
 def _parse_json(raw: str) -> dict[str, Any]:
-    """Parse `raw` as a JSON object. Raise ValueError on anything else."""
     text = raw.strip()
-    # Some models still wrap output in ```json fences despite format="json".
     if text.startswith("```"):
         text = text.split("```", 2)[1] if text.count("```") >= 2 else text
         if text.startswith("json\n"):
@@ -68,17 +76,6 @@ def _parse_json(raw: str) -> dict[str, Any]:
     return data
 
 
-def _generate_with_timeout(prompt: str, model: str, timeout: float) -> str:
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(_call_model, prompt, model)
-        try:
-            return future.result(timeout=timeout)
-        except FutureTimeoutError as exc:
-            # We cannot kill the worker thread; it will finish on its own.
-            # The caller, however, gets a clean timeout.
-            raise LLMError(f"model call exceeded {timeout:.0f}s timeout") from exc
-
-
 def ask_json(
     prompt: str,
     *,
@@ -86,12 +83,7 @@ def ask_json(
     model: str = DEFAULT_MODEL,
     timeout: float = DEFAULT_TIMEOUT_S,
 ) -> dict[str, Any]:
-    """Ask the model for a JSON object. Retry once, then raise LLMError.
-
-    `schema_hint` is appended to the prompt as a one-line reminder of the
-    expected shape. It is guidance, not enforcement; the enforcement is
-    the JSON parse below.
-    """
+    """Ask the model for a JSON object. Retry once, then raise LLMError."""
     if not prompt or not isinstance(prompt, str):
         raise ValueError("prompt must be a non-empty string")
 
@@ -100,7 +92,10 @@ def ask_json(
     last_raw = ""
     last_err: Exception | None = None
     for attempt in (1, 2):
-        raw = _generate_with_timeout(full_prompt, model, timeout)
+        try:
+            raw = _call_model(full_prompt, model, timeout)
+        except Exception as exc:
+            raise LLMError(f"model call failed: {exc}") from exc
         last_raw = raw
         try:
             return _parse_json(raw)

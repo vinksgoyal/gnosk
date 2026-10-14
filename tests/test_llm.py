@@ -17,7 +17,7 @@ def fake_calls(monkeypatch):
     calls: list[str] = []
     replies: list[str] = []
 
-    def fake(prompt: str, model: str) -> str:
+    def fake(prompt: str, model: str, timeout: float) -> str:
         calls.append(prompt)
         return replies.pop(0) if replies else "{}"
 
@@ -57,7 +57,7 @@ class TestAskJsonRetries:
         assert result == {"ok": True}
         assert len(calls) == 2
         # Second prompt should include the retry suffix.
-        assert "previous response was not valid JSON" in calls[1]
+        assert "Previous response was not valid JSON" in calls[1]
 
     def test_raises_after_two_failures(self, fake_calls):
         _, replies = fake_calls
