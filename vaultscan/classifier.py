@@ -2,10 +2,12 @@
 
 The deterministic validators cannot tell an Aadhaar number in
 `tests/test_aadhaar.py` from one in a customer database dump. This
-module asks the local model to make that call, one file at a time.
+module asks the local model to make that call, one batch at a time.
 
-Model failures degrade to `unknown` rather than raising. Classification
-is advisory; detection is not.
+Prompt shape and response shape are both constrained by hardware. On a
+2-core CPU running gemma2:2b, throughput is ~2 tokens/sec. We send each
+finding's containing line (not the whole file) and ask for a minimal
+JSON response with no reasons, so a single call stays under ~30s.
 """
 
 from __future__ import annotations
@@ -20,80 +22,67 @@ VERDICT_FIXTURE = "fixture"
 VERDICT_UNKNOWN = "unknown"
 _VALID_VERDICTS = {VERDICT_REAL, VERDICT_FIXTURE, VERDICT_UNKNOWN}
 
-# 2B model on CPU. Longer prompts slow down without improving accuracy.
-_MAX_FILE_CHARS = 4000
-_MAX_FINDINGS_PER_CALL = 30
+# Batching. Smaller = smaller prompt and smaller response = faster.
+# Tuned for gemma2:2b on 2 CPU cores. Bump on faster hardware.
+_MAX_FINDINGS_PER_CALL = 5
+_MAX_LINE_CHARS = 140
 
-_RUBRIC = """\
-Verdicts:
-- "fixture"  test data, example, placeholder, documentation, sample
-- "real"     looks like actual customer/user/employee data
-- "unknown"  genuinely cannot tell from the surrounding text
+_RULES = (
+    "Rules: fixture = tests/examples/sample data (tests/, mock, "
+    "alice@example.com). real = production data (config, .env, migrations). "
+    "Emit one verdict per item, no reasons."
+)
 
-Signals for "fixture":
-- file path contains tests/, test_, fixtures/, examples/, sample_data/
-- string contains example, dummy, placeholder, sample, test, fake, foo, bar
-- value is a well-known example (alice@example.com, AKIAIOSFODNN7EXAMPLE)
-- surrounding code has assert, expect, mock, stub, patch
-
-Signals for "real":
-- file path looks like production code or config
-- value sits in a migration, seed with real-looking records, .env, credentials
-- surrounding code writes to a DB, sends an email, calls a payment API
-"""
+_SCHEMA = (
+    'Reply ONLY: {"judgments":[{"index":int,"verdict":"fixture"|"real"|"unknown"}]}'
+)
 
 
 @dataclass(frozen=True, slots=True)
 class ClassifiedFinding:
-    """A Finding plus the model's judgment about it."""
-
     finding: Finding
-    verdict: str          # one of VERDICT_REAL / VERDICT_FIXTURE / VERDICT_UNKNOWN
+    verdict: str
     reason: str
 
 
-def _truncate(text: str, limit: int = _MAX_FILE_CHARS) -> str:
-    if len(text) <= limit:
-        return text
-    half = limit // 2
-    return text[:half] + "\n\n[... file truncated for length ...]\n\n" + text[-half:]
+def _extract_line_context(text: str, start: int, end: int) -> str:
+    """Return the line of `text` that contains the span [start, end).
+
+    Truncated to `_MAX_LINE_CHARS`. Returns an empty string if the span
+    is out of bounds or the line is blank.
+    """
+    if not text:
+        return ""
+    if start < 0 or end < start or start > len(text):
+        return ""
+    line_start = text.rfind("\n", 0, start) + 1
+    line_end = text.find("\n", end)
+    if line_end == -1:
+        line_end = len(text)
+    line = text[line_start:line_end].strip()
+    if len(line) > _MAX_LINE_CHARS:
+        line = line[:_MAX_LINE_CHARS] + "..."
+    return line
 
 
 def _build_prompt(path: str, text: str, findings: list[Finding]) -> str:
-    lines = [
-        "You are auditing a codebase for a privacy tool.",
-        "Below is one file's content and a list of PII-looking strings",
-        "found in it. For each item, decide whether it is real data",
-        "belonging to an actual person, or a test fixture.",
-        "",
-        f"File path: {path}",
-        "",
-        "File content:",
-        "-----",
-        _truncate(text),
-        "-----",
-        "",
-        "Findings (use these indices):",
-    ]
+    """Build a compact prompt. Does not include the full file contents."""
+    lines = [f"Path: {path}", _RULES, "Items:"]
     for i, f in enumerate(findings):
-        lines.append(f'{i}. [{f.category}] "{f.value}"')
-    lines.extend([
-        "",
-        _RUBRIC,
-        "",
-        'Respond with JSON: {"judgments": [{"index": <int>, '
-        '"verdict": "fixture"|"real"|"unknown", "reason": "<short>"}]}',
-    ])
+        ctx = _extract_line_context(text, f.start, f.end)
+        if ctx:
+            lines.append(f'{i}. [{f.category}] "{f.value}" | {ctx}')
+        else:
+            lines.append(f'{i}. [{f.category}] "{f.value}"')
+    lines.append("")
+    lines.append(_SCHEMA)
     return "\n".join(lines)
 
 
-def _parse_judgments(
-    data: dict, n_findings: int
-) -> list[tuple[str, str]]:
-    """Return one (verdict, reason) per finding, defaulting to unknown."""
+def _parse_judgments(data: dict, n_findings: int) -> list[tuple[str, str]]:
+    """Return one (verdict, reason) per finding; default (unknown, '')."""
     out: list[tuple[str, str]] = [
-        (VERDICT_UNKNOWN, "model gave no judgment for this item")
-        for _ in range(n_findings)
+        (VERDICT_UNKNOWN, "no judgment returned") for _ in range(n_findings)
     ]
     judgments = data.get("judgments")
     if not isinstance(judgments, list):
@@ -103,12 +92,12 @@ def _parse_judgments(
             continue
         idx = j.get("index")
         verdict = j.get("verdict")
-        reason = j.get("reason", "")
         if not isinstance(idx, int) or not (0 <= idx < n_findings):
             continue
         if verdict not in _VALID_VERDICTS:
             continue
-        out[idx] = (verdict, str(reason)[:200])
+        reason = j.get("reason")
+        out[idx] = (verdict, str(reason)[:200] if reason else "")
     return out
 
 
@@ -119,14 +108,11 @@ def classify_findings(
 ) -> list[ClassifiedFinding]:
     """Return one ClassifiedFinding per input finding.
 
-    Never raises on model failure; failed classifications become "unknown"
-    with a reason that reflects why.
+    Never raises on model failure; failed classifications become "unknown".
     """
     if not findings:
         return []
 
-    # If a file somehow accumulates a huge finding count, chunk the work
-    # rather than blowing past the model's context window.
     if len(findings) > _MAX_FINDINGS_PER_CALL:
         return (
             classify_findings(path, text, findings[:_MAX_FINDINGS_PER_CALL])
@@ -138,7 +124,7 @@ def classify_findings(
         verdicts = _parse_judgments(data, len(findings))
     except LLMError as exc:
         verdicts = [
-            (VERDICT_UNKNOWN, f"model call failed: {exc}"[:200])
+            (VERDICT_UNKNOWN, f"model call failed: {str(exc)[:120]}")
             for _ in findings
         ]
 

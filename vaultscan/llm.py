@@ -19,8 +19,8 @@ from typing import Any
 import ollama
 
 DEFAULT_MODEL = os.environ.get("VAULTSCAN_MODEL", "gemma2:2b")
-DEFAULT_TIMEOUT_S = float(os.environ.get("VAULTSCAN_TIMEOUT_S", "120"))
-DEFAULT_NUM_PREDICT = int(os.environ.get("VAULTSCAN_NUM_PREDICT", "400"))
+DEFAULT_TIMEOUT_S = float(os.environ.get("VAULTSCAN_TIMEOUT_S", "150"))
+DEFAULT_NUM_PREDICT = int(os.environ.get("VAULTSCAN_NUM_PREDICT", "180"))
 DEFAULT_NUM_CTX = int(os.environ.get("VAULTSCAN_NUM_CTX", "2048"))
 
 _RETRY_SUFFIX = (
