@@ -101,7 +101,7 @@ def signature_text(name: str = SIGNATURE_NAME):
     return text
 
 
-def print_signature(console: "Console") -> None:
+def print_signature(console: Console) -> None:
     """Print the author signature under the banner. TTY-only."""
     if not is_interactive():
         return
