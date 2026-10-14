@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gnosk — Know what your code knows.</title>
+<meta name="description" content="Offline PII scanner for freelance devs and small agencies. Runs on your machine. Never uploads your files.">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --fg: #e6e9ef;
+    --muted: #8b93a7;
+    --accent: #6ee7b7;
+    --border: #1c222b;
+    --code-bg: #11151b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 64px 24px 96px; }
+  h1 { font-size: 44px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 22px; margin: 48px 0 12px; }
+  .tagline { color: var(--accent); font-size: 20px; margin: 0 0 32px; }
+  p { color: var(--fg); }
+  .muted { color: var(--muted); }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    font: 14px/1.5 ui-monospace, "JetBrains Mono", monospace;
+  }
+  code { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 0.95em; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 48px 0; }
+  footer { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Gnosk</h1>
+  <p class="tagline">Know what your code knows.</p>
+
+  <p>
+    <span class="pill">local-first</span>
+    <span class="pill">open-weight model</span>
+    <span class="pill">MIT</span>
+  </p>
+
+  <p>
+    Gnosk scans a codebase for personally identifiable information —
+    Aadhaar, PAN, phone numbers, emails, API keys — and writes a
+    redacted data inventory you can hand to a client.
+  </p>
+
+  <p>
+    Everything runs on your machine. No file, path, or snippet ever leaves
+    the laptop. You can unplug the network cable and it still works.
+  </p>
+
+  <h2>Why</h2>
+  <p>
+    Freelancers and small agencies in India are increasingly asked by
+    clients to sign data-protection clauses under the DPDP Act. Enterprise
+    DLP tools cost more than a freelancer's monthly income. Cloud-based
+    scanners require uploading the exact data you're trying to protect.
+  </p>
+  <p>
+    Gnosk is the local-first alternative: run one command, get a report,
+    keep your files where they are.
+  </p>
+
+  <h2>Install</h2>
+  <pre><code># from source (not yet on PyPI)
+git clone https://github.com/vinksgoyal/gnosk
+cd gnosk
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -e ".[dev]"
+
+# scan a folder
+gnosk scan ./my-client-project
+
+# write a client-ready inventory
+gnosk report ./my-client-project --output inventory.md</code></pre>
+
+  <h2>How it works</h2>
+  <p>
+    <strong>Deterministic validators first.</strong> Aadhaar Verhoeff
+    checksum, PAN format, phone/email patterns, and 12 provider API-key
+    shapes. Fast, auditable, no model needed.
+  </p>
+  <p>
+    <strong>Local model second.</strong> Gemma 2B via Ollama reads the
+    surrounding code to separate real customer data from test fixtures.
+    No cloud call. No token bill. No data leaving the machine.
+  </p>
+
+  <hr>
+
+  <h2>What Gnosk is not</h2>
+  <p class="muted">
+    Not a compliance certification. Not legal advice. Not a replacement
+    for a formal audit. It produces a <em>readiness</em> report — a
+    starting point for a conversation with your client or your CA.
+  </p>
+
+  <footer>
+    <p>
+      <a href="https://github.com/vinksgoyal/gnosk">github.com/vinksgoyal/gnosk</a>
+      · MIT
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>
