@@ -17,16 +17,20 @@ SOURCE_MODEL = "model"
 class Finding:
     """One detected piece of potentially-sensitive data.
 
-    `start` and `end` are character offsets into whatever text was scanned.
-    `value` is the raw matched substring — callers are responsible for
-    redacting it before writing to disk or stdout.
+    `start` and `end` are character offsets into whatever text was
+    scanned. `value` is the raw matched substring — callers are
+    responsible for redacting it before writing to disk or stdout.
+
+    `line` is 1-indexed and optional; validators leave it as None and the
+    scanner fills it in, since only the scanner has the source text.
     """
 
-    category: str          # e.g. "aadhaar", "pan", "email"
-    value: str             # the matched substring, verbatim
+    category: str
+    value: str
     start: int
     end: int
-    confidence: float      # 0.0 - 1.0
-    source: str            # SOURCE_VALIDATOR or SOURCE_MODEL
-    validator: str         # e.g. "aadhaar.verhoeff", "pan.format"
+    confidence: float
+    source: str
+    validator: str
     notes: str | None = None
+    line: int | None = None

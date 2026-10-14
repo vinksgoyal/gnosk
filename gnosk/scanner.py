@@ -1,32 +1,27 @@
 """Walk a filesystem path and run every validator against every text file.
 
 The scanner knows nothing about individual PII categories — it just
-dispatches to the validators and collects what they return. Adding a new
-validator is a one-line change to `_VALIDATORS`.
-Known false-positive surface, observed on 2026-10-13 by scanning
-Gnosk's own repository: the validator layer cannot tell a real
-Aadhaar from a test fixture. A clean run on Gnosk's own source
-produced ~60 findings, almost all of them sample data in tests/.
-Distinguishing real customer data from fixtures is a job for the local
-model (see docs/ for the model contract). Do not try to patch this with
-more regex; a path-based rule would be brittle and would miss fixtures
-embedded in non-test files.
+dispatches to the validators, then annotates each Finding with the line
+number where it occurred.
+
+Known false-positive surface: the validator layer cannot tell a real
+Aadhaar from a test fixture. Scanning Gnosk's own repository yields ~60
+findings, almost all fixtures in tests/. Distinguishing real data from
+fixtures is a job for the local model (see classifier.py).
 """
 
 from __future__ import annotations
 
 import os
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from gnosk.findings import Finding
 from gnosk.validators import aadhaar, email, pan, phone, secrets
 
-# Every module here must expose `scan(text: str) -> list[Finding]`.
 _VALIDATORS = (aadhaar, pan, email, phone, secrets)
 
-# Directory names to prune entirely during the walk.
 _SKIP_DIRS = frozenset({
     ".git", ".hg", ".svn",
     "node_modules", "bower_components",
@@ -39,33 +34,22 @@ _SKIP_DIRS = frozenset({
     "coverage", "htmlcov",
 })
 
-# Extensions that are never scannable text.
 _SKIP_EXTS = frozenset({
-    # Bytecode / native
     ".pyc", ".pyo", ".so", ".dylib", ".dll", ".exe", ".bin", ".o", ".a",
-    # Archives
     ".zip", ".tar", ".gz", ".bz2", ".xz", ".7z", ".rar",
-    # Images
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".bmp", ".tiff",
-    # Audio / video
     ".mp3", ".mp4", ".wav", ".ogg", ".webm", ".mov", ".avi", ".mkv",
-    # Documents handled by dedicated parsers later
     ".pdf", ".docx", ".xlsx", ".pptx",
-    # Fonts
     ".woff", ".woff2", ".ttf", ".otf", ".eot",
-    # Databases
     ".db", ".sqlite", ".sqlite3",
-    # Lockfiles
     ".lock",
 })
 
-_MAX_FILE_BYTES = 5 * 1024 * 1024  # 5 MiB
+_MAX_FILE_BYTES = 5 * 1024 * 1024
 
 
 @dataclass(slots=True)
 class FileFindings:
-    """Findings from a single file. Empty list means the file was clean."""
-
     path: Path
     findings: list[Finding] = field(default_factory=list)
 
@@ -75,12 +59,10 @@ class FileFindings:
 
 
 def _read_text(path: Path) -> str | None:
-    """Return decoded text, or None if the file looks binary or unreadable."""
     try:
         data = path.read_bytes()
     except OSError:
         return None
-    # Null byte in the first block is the classic binary signal.
     if b"\x00" in data[:8192]:
         return None
     try:
@@ -101,6 +83,11 @@ def _is_scannable(path: Path) -> bool:
         return False
 
 
+def _line_of(text: str, offset: int) -> int:
+    """Return the 1-indexed line number containing `offset`."""
+    return text.count("\n", 0, offset) + 1
+
+
 def scan_file(path: Path) -> FileFindings:
     """Run every validator against a single file. Never raises on I/O."""
     result = FileFindings(path=path)
@@ -109,6 +96,9 @@ def scan_file(path: Path) -> FileFindings:
         return result
     for validator in _VALIDATORS:
         result.findings.extend(validator.scan(text))
+    result.findings = [
+        replace(f, line=_line_of(text, f.start)) for f in result.findings
+    ]
     result.findings.sort(key=lambda f: (f.start, f.end))
     return result
 
