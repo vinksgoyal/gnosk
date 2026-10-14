@@ -71,7 +71,39 @@ def print_banner(console: Console, version: str) -> None:
     console.print(f"[cyan]{BANNER}[/cyan]")
     console.print(f"  [dim]{TAGLINE}[/dim]  [dim]v{version}[/dim]")
     console.print()
-
+    print_signature(console)
 
 def color_for(category: str) -> str:
     return CATEGORY_COLORS.get(category, "white")
+
+
+SIGNATURE_NAME = "Vinks Goyal"
+
+
+def signature_text(name: str = SIGNATURE_NAME):
+    """Return a Rich Text with a rainbow gradient across `by <name>`.
+
+    Imported lazily so ui.py stays importable when Rich isn't present
+    in some future context (e.g. tests that only exercise config_dir).
+    """
+    import colorsys
+
+    from rich.text import Text
+
+    full = f"by {name}"
+    n = max(len(full) - 1, 1)
+    text = Text()
+    for i, ch in enumerate(full):
+        hue = (i / n) % 1.0
+        r, g, b = colorsys.hsv_to_rgb(hue, 0.75, 1.0)
+        style = f"rgb({int(r * 255)},{int(g * 255)},{int(b * 255)})"
+        text.append(ch, style=style)
+    return text
+
+
+def print_signature(console: "Console") -> None:
+    """Print the author signature under the banner. TTY-only."""
+    if not is_interactive():
+        return
+    console.print(signature_text(), justify="left")
+    console.print()

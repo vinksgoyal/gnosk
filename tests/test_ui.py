@@ -75,3 +75,29 @@ class TestBanner:
         console = Console(file=buf, force_terminal=False)
         ui.print_banner(console, "0.0.1")
         assert buf.getvalue() == ""
+
+
+class TestSignature:
+    def test_signature_has_visible_text(self):
+        text = ui.signature_text("Test User")
+        assert "Test User" in text.plain
+        assert text.plain.startswith("by ")
+
+    def test_signature_uses_per_char_colors(self):
+        text = ui.signature_text("Vinks Goyal")
+        # Every span should carry an rgb() style, and there should be
+        # roughly one per character.
+        styles = [str(span.style) for span in text.spans]
+        assert len(styles) >= len("Vinks Goyal")
+        assert all("rgb(" in s for s in styles)
+
+    def test_print_signature_skipped_when_not_interactive(self, monkeypatch):
+        from io import StringIO
+
+        from rich.console import Console
+
+        monkeypatch.setenv("NO_COLOR", "1")
+        buf = StringIO()
+        console = Console(file=buf, force_terminal=False)
+        ui.print_signature(console)
+        assert buf.getvalue() == ""
