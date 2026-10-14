@@ -1,8 +1,10 @@
-# VaultScan
+# Gnosk
 
-**Offline PII leak scanner for freelance devs and small agencies.**
+**Know what your code knows.**
 
-VaultScan scans a codebase, a folder of documents, or a database dump for
+Offline PII leak scanner for freelance devs and small agencies.
+
+Gnosk scans a codebase, a folder of documents, or a database dump for
 personally identifiable information (PII) — Aadhaar, PAN, phone numbers,
 emails, addresses, API keys — and produces a data inventory plus a
 client-ready "DPDP readiness" report. **Everything runs on your machine.**
@@ -17,7 +19,7 @@ sign data-protection clauses under the DPDP Act. Enterprise DLP tools cost
 more than a freelancer's monthly income. Cloud-based scanners require
 uploading the exact data you're trying to protect.
 
-VaultScan is the local-first alternative: run one command, get a report you
+Gnosk is the local-first alternative: run one command, get a report you
 can hand to a client, keep your files where they are.
 
 ## How it works
@@ -31,9 +33,9 @@ can hand to a client, keep your files where they are.
    flows, separating real customer data from test fixtures, and drafting
    the data inventory and the client-facing readiness report.
 3. **Nothing leaves the machine.** No network calls at scan time. You can
-   unplug the network cable and VaultScan still works.
+   unplug the network cable and Gnosk still works.
 
-## What VaultScan is NOT
+## What Gnosk is NOT
 
 - It is **not** a compliance certification.
 - It does **not** claim your project is "DPDP compliant."
@@ -62,8 +64,8 @@ Not published yet. Clone and run from source once Task 2 lands.
 
 ## Usage (planned)
 
-    vaultscan scan ./my-client-project
-    vaultscan report --format pdf
+    gnosk scan ./my-client-project
+    gnosk report --format pdf
 
 ## License
 
@@ -71,6 +73,6 @@ MIT. See LICENSE.
 
 ## Disclaimer
 
-VaultScan is a developer tool. Its output is informational only and does not
+Gnosk is a developer tool. Its output is informational only and does not
 constitute legal advice or a compliance certification. You are responsible
 for how you use and share its reports.

@@ -24,10 +24,10 @@ ollama-models/
 *.gguf
 *.safetensors
 
-# VaultScan output (never commit scan results — they contain PII)
+# Gnosk output (never commit scan results — they contain PII)
 reports/
 out/
-*.vaultscan.json
+*.gnosk.json
 sample_data/private/
 
 # Editors / OS

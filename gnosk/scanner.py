@@ -4,8 +4,8 @@ The scanner knows nothing about individual PII categories — it just
 dispatches to the validators and collects what they return. Adding a new
 validator is a one-line change to `_VALIDATORS`.
 Known false-positive surface, observed on 2026-10-13 by scanning
-VaultScan's own repository: the validator layer cannot tell a real
-Aadhaar from a test fixture. A clean run on VaultScan's own source
+Gnosk's own repository: the validator layer cannot tell a real
+Aadhaar from a test fixture. A clean run on Gnosk's own source
 produced ~60 findings, almost all of them sample data in tests/.
 Distinguishing real customer data from fixtures is a job for the local
 model (see docs/ for the model contract). Do not try to patch this with
@@ -20,8 +20,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from vaultscan.findings import Finding
-from vaultscan.validators import aadhaar, email, pan, phone, secrets
+from gnosk.findings import Finding
+from gnosk.validators import aadhaar, email, pan, phone, secrets
 
 # Every module here must expose `scan(text: str) -> list[Finding]`.
 _VALIDATORS = (aadhaar, pan, email, phone, secrets)

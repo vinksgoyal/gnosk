@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from vaultscan.scanner import scan_file, scan_path
+from gnosk.scanner import scan_file, scan_path
 
 
 def test_scan_file_finds_aadhaar(tmp_path: Path) -> None:

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 
-from vaultscan.findings import SOURCE_VALIDATOR, Finding
+from gnosk.findings import SOURCE_VALIDATOR, Finding
 
 # Forms covered:
 #   +91 9876543210   +91-9876543210   +919876543210

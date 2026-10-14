@@ -3,7 +3,7 @@
 PAN has no public checksum, so these tests cover format + holder code only.
 """
 
-from vaultscan.validators.pan import (
+from gnosk.validators.pan import (
     find_pan_candidates,
     is_valid_pan,
     scan,

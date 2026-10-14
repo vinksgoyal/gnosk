@@ -1,4 +1,4 @@
-"""VaultScan CLI entry point."""
+"""Gnosk CLI entry point."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from vaultscan import __version__
-from vaultscan.scanner import scan_path
+from gnosk import __version__
+from gnosk.scanner import scan_path
 
 app = typer.Typer(
-    name="vaultscan",
+    name="gnosk",
     help="Offline PII leak scanner. Runs locally, never uploads your files.",
     no_args_is_help=True,
     add_completion=False,
@@ -21,7 +21,7 @@ console = Console()
 
 def _version_callback(value: bool) -> None:
     if value:
-        console.print(f"vaultscan {__version__}")
+        console.print(f"gnosk {__version__}")
         raise typer.Exit()
 
 
@@ -36,7 +36,7 @@ def main(
         is_eager=True,
     ),
 ) -> None:
-    """VaultScan — local-first PII scanner."""
+    """Gnosk — local-first PII scanner."""
 
 
 @app.command()

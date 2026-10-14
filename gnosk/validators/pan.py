@@ -3,7 +3,7 @@
 A PAN is 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter.
 The 4th letter encodes the holder type (individual, company, trust, etc.).
 The 10th letter is a check character, but the algorithm is not public, so
-VaultScan can only validate format and holder code — not authenticity.
+Gnosk can only validate format and holder code — not authenticity.
 
 This module does NOT verify that a PAN belongs to a real person or entity.
 """
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 
-from vaultscan.findings import SOURCE_VALIDATOR, Finding
+from gnosk.findings import SOURCE_VALIDATOR, Finding
 
 # 10 characters: 5 letters, 4 digits, 1 letter. Word boundaries only.
 PAN_RE = re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b")

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 
-from vaultscan.findings import SOURCE_VALIDATOR, Finding
+from gnosk.findings import SOURCE_VALIDATOR, Finding
 
 # 12 digits total; first is 2-9; word boundaries so we don't match inside
 # longer digit runs (e.g. a 16-digit order ID).

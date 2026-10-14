@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from vaultscan import classifier
-from vaultscan.findings import Finding
+from gnosk import classifier
+from gnosk.findings import Finding
 
 
 def _make_finding(
@@ -182,7 +182,7 @@ class TestDegradedCases:
         assert out[0].verdict == "unknown"
 
     def test_llm_error_degrades_to_unknown(self, fake_ask):
-        from vaultscan.llm import LLMError
+        from gnosk.llm import LLMError
 
         _, replies = fake_ask
         replies.append(LLMError("simulated failure"))

@@ -4,7 +4,7 @@ Sample API keys here are constructed to match each provider's documented
 shape. None of them are real, and none will authenticate anywhere.
 """
 
-from vaultscan.validators import email, phone, secrets
+from gnosk.validators import email, phone, secrets
 
 
 class TestEmail:

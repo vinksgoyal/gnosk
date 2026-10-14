@@ -1,4 +1,4 @@
-"""Shared structured output type for all VaultScan detectors.
+"""Shared structured output type for all Gnosk detectors.
 
 Every detector — deterministic validator or local model — emits `Finding`
 objects. Nothing downstream should ever need to know which kind of

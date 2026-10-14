@@ -1,6 +1,6 @@
 """The only module that talks to Ollama.
 
-Every model call in VaultScan goes through `ask_json`. Keeping the Ollama
+Every model call in Gnosk goes through `ask_json`. Keeping the Ollama
 client behind a single tested interface means version drift, response
 shape changes, and timeout quirks stay isolated here.
 
@@ -18,10 +18,10 @@ from typing import Any
 
 import ollama
 
-DEFAULT_MODEL = os.environ.get("VAULTSCAN_MODEL", "gemma2:2b")
-DEFAULT_TIMEOUT_S = float(os.environ.get("VAULTSCAN_TIMEOUT_S", "150"))
-DEFAULT_NUM_PREDICT = int(os.environ.get("VAULTSCAN_NUM_PREDICT", "180"))
-DEFAULT_NUM_CTX = int(os.environ.get("VAULTSCAN_NUM_CTX", "2048"))
+DEFAULT_MODEL = os.environ.get("GNOSK_MODEL", "gemma2:2b")
+DEFAULT_TIMEOUT_S = float(os.environ.get("GNOSK_TIMEOUT_S", "150"))
+DEFAULT_NUM_PREDICT = int(os.environ.get("GNOSK_NUM_PREDICT", "180"))
+DEFAULT_NUM_CTX = int(os.environ.get("GNOSK_NUM_CTX", "2048"))
 
 _RETRY_SUFFIX = (
     "\n\nPrevious response was not valid JSON. "

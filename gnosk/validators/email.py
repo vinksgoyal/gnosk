@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-from vaultscan.findings import SOURCE_VALIDATOR, Finding
+from gnosk.findings import SOURCE_VALIDATOR, Finding
 
 # Deliberately permissive: matches the practical subset of RFC 5322 that
 # real-world addresses use. Does not match quoted local parts or IP-literal

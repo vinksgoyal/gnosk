@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import re
 
-from vaultscan.findings import SOURCE_VALIDATOR, Finding
+from gnosk.findings import SOURCE_VALIDATOR, Finding
 
 # Ordered list of (name, compiled pattern). Names appear in the Finding's
 # `validator` field so the report can tell the user which provider leaked.

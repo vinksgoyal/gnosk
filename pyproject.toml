@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "vaultscan"
+name = "gnosk"
 version = "0.0.1"
 description = "Offline PII leak scanner for freelance devs and small agencies"
 readme = "README.md"
@@ -33,7 +33,7 @@ dev = [
 ]
 
 [project.scripts]
-vaultscan = "vaultscan.cli:app"
+gnosk = "gnosk.cli:app"
 
 [tool.ruff]
 line-length = 100

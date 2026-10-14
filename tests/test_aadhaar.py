@@ -4,7 +4,7 @@ The valid numbers here are constructed, not real Aadhaar numbers. The
 prefix 23456789012 has Verhoeff check digit 4, giving 234567890124.
 """
 
-from vaultscan.validators.aadhaar import (
+from gnosk.validators.aadhaar import (
     find_aadhaar_candidates,
     is_valid_aadhaar,
 )
@@ -78,7 +78,7 @@ class TestFindCandidates:
 
 class TestAadhaarScan:
     def test_valid_aadhaar_is_full_confidence(self):
-        from vaultscan.validators import aadhaar
+        from gnosk.validators import aadhaar
 
         [f] = aadhaar.scan("ID: 234567890124")
         assert f.category == "aadhaar"
@@ -88,7 +88,7 @@ class TestAadhaarScan:
         assert f.notes is None
 
     def test_checksum_failure_is_low_confidence(self):
-        from vaultscan.validators import aadhaar
+        from gnosk.validators import aadhaar
 
         [f] = aadhaar.scan("ID: 234567890123")
         assert f.confidence == 0.3

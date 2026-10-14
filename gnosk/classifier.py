@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from vaultscan.findings import Finding
-from vaultscan.llm import LLMError, ask_json
+from gnosk.findings import Finding
+from gnosk.llm import LLMError, ask_json
 
 VERDICT_REAL = "real"
 VERDICT_FIXTURE = "fixture"

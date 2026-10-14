@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from vaultscan import llm
+from gnosk import llm
 
 
 @pytest.fixture

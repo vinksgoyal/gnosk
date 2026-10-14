@@ -4,7 +4,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from vaultscan.cli import app
+from gnosk.cli import app
 
 runner = CliRunner()
 
@@ -12,7 +12,7 @@ runner = CliRunner()
 def test_version_flag() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert "vaultscan" in result.stdout
+    assert "gnosk" in result.stdout
 
 
 def test_scan_reports_findings(tmp_path: Path) -> None:

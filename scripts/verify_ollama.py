@@ -1,8 +1,8 @@
 """Verify that Ollama is running and the configured Gemma model responds.
 
-Run this before any VaultScan code that depends on the model. If this
+Run this before any Gnosk code that depends on the model. If this
 script fails, nothing downstream will work, and the failure will be a
-foundation problem, not a VaultScan problem.
+foundation problem, not a Gnosk problem.
 
 Usage:
     python scripts/verify_ollama.py
