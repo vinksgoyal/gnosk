@@ -206,3 +206,20 @@ class TestRule5Defer:
     def test_pan_in_production_path_defers(self):
         f = _f("pan", "ABCPD1234E")
         assert triage(f, "src/kyc.py") is None
+
+
+class TestCountNeedsModel:
+    def test_mixed_batch(self):
+        from gnosk.triage import count_needs_model
+
+        # alice = triaged, key in tests = deferred (rule 2),
+        # phone in tests = triaged, email in src = deferred.
+        findings = [
+            _f("email", "alice@example.com"),
+            _f("api_key", "AKIA1234567890ABCDEF"),
+            _f("phone_in", "9876543210"),
+            _f("email", "ceo@realclient.com"),
+        ]
+        assert count_needs_model("tests/x.py", findings[:3]) == 1
+        assert count_needs_model("src/x.py", [findings[3]]) == 1
+        assert count_needs_model("tests/x.py", []) == 0

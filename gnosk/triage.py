@@ -115,3 +115,8 @@ def triage(finding: Finding, path: str) -> tuple[str, str] | None:
 
     # Rule 5 — defer to the model.
     return None
+
+
+def count_needs_model(path: str, findings: list[Finding]) -> int:
+    """Count findings that the model will actually see."""
+    return sum(1 for f in findings if triage(f, path) is None)

@@ -192,7 +192,19 @@ def _dispatch(console: Console, line: str) -> bool:
         verdicts: dict[str, int] = {}
         sources: dict[str, int] = {}
         for r in files:
-            console.print(f"  [dim]classifying {r.count} finding(s) in {r.path}…[/dim]")
+            from gnosk.triage import count_needs_model
+
+            needs = count_needs_model(str(r.path), r.findings)
+            if needs == 0:
+                console.print(
+                    f"  [dim]{r.count} finding(s) in {r.path}: "
+                    f"all triaged[/dim]"
+                )
+            else:
+                console.print(
+                    f"  [dim]{r.count} finding(s) in {r.path}: "
+                    f"{r.count - needs} triaged, {needs} to model…[/dim]"
+                )
             text = r.path.read_text(errors="replace")
             for cf in classify_findings(str(r.path), text, r.findings):
                 verdicts[cf.verdict] = verdicts.get(cf.verdict, 0) + 1
