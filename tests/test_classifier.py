@@ -47,14 +47,9 @@ def fake_ask(monkeypatch):
     return calls, replies
 
 
-# ---------------------------------------------------------------------------
-# All-triaged path — no model call
-# ---------------------------------------------------------------------------
-
 class TestAllTriaged:
     def test_no_model_call_when_all_triaged(self, fake_ask):
         calls, _ = fake_ask
-        # Three findings, all in tests/ — all dismissed by path rule.
         findings = [
             _f("email", "someone@client.com"),
             _f("phone_in", "9876543210"),
@@ -67,30 +62,20 @@ class TestAllTriaged:
         assert calls == []
 
 
-# ---------------------------------------------------------------------------
-# Mixed triaged / model
-# ---------------------------------------------------------------------------
-
 class TestMixed:
     def test_only_untriaged_reach_model(self, fake_ask):
         calls, replies = fake_ask
-        # One is a known fixture (triaged), one is a real-looking key
-        # in tests/ (deferred to model).
         findings = [
-            _f("email", "alice@example.com"),                      # triaged
-            _f("api_key", "AKIA1234567890ABCDEF"),                 # deferred
+            _f("email", "alice@example.com"),
+            _f("api_key", "AKIA1234567890ABCDEF"),
         ]
-        replies.append(
-            {"judgments": [{"index": 0, "verdict": "fixture"}]}
-        )
+        replies.append({"judgments": [{"index": 0, "verdict": "fixture"}]})
         result = classifier.classify_findings("tests/test_aws.py", "body", findings)
         assert len(result) == 2
         assert result[0].source == SOURCE_TRIAGE
         assert result[1].source == SOURCE_MODEL
         assert result[1].verdict == "fixture"
-        # Exactly one model call.
         assert len(calls) == 1
-        # The deferred finding (and only it) should appear in the prompt.
         # The deferred finding appears in the Items section; the triaged
         # one does not. (The rules block mentions alice@example.com as an
         # example of a fixture email, so a plain substring check is wrong.)
@@ -98,13 +83,12 @@ class TestMixed:
         assert "AKIA1234567890ABCDEF" in items_section
         assert "alice@example.com" not in items_section
 
-
     def test_order_preserved_across_triage_and_model(self, fake_ask):
         _, replies = fake_ask
         findings = [
-            _f("email", "alice@example.com"),              # triaged fixture
-            _f("api_key", "AKIA1234567890ABCDEF", start=50),  # deferred
-            _f("phone_in", "9876543210", start=100),       # triaged (path)
+            _f("email", "alice@example.com"),
+            _f("api_key", "AKIA1234567890ABCDEF", start=50),
+            _f("phone_in", "9876543210", start=100),
         ]
         replies.append({"judgments": [{"index": 0, "verdict": "real"}]})
         result = classifier.classify_findings("tests/x.py", "body", findings)
@@ -117,14 +101,9 @@ class TestMixed:
         assert result[1].verdict == "real"
 
 
-# ---------------------------------------------------------------------------
-# Batching the deferred findings
-# ---------------------------------------------------------------------------
-
 class TestModelBatching:
     def test_deferred_findings_batch_at_cap(self, fake_ask):
         calls, replies = fake_ask
-        # 12 real-looking API keys — every one defers. Cap is 5.
         findings = [
             _f("api_key", f"AKIA{i:016d}", start=i * 30)
             for i in range(12)
@@ -133,7 +112,8 @@ class TestModelBatching:
             replies.append({"judgments": []})
         result = classifier.classify_findings("src/keys.py", "body", findings)
         assert len(result) == 12
-        assert len(calls) == 3  # 5 + 5 + 2
+        assert len(calls) == 3
+
 
 class TestModelFailure:
     def test_llm_error_becomes_unknown_with_model_source(self, fake_ask):
@@ -147,10 +127,6 @@ class TestModelFailure:
         assert result[0].source == SOURCE_MODEL
         assert "model call failed" in result[0].reason
 
-
-# ---------------------------------------------------------------------------
-# Edge cases
-# ---------------------------------------------------------------------------
 
 class TestEdges:
     def test_empty_findings_returns_empty(self, fake_ask):
@@ -166,7 +142,6 @@ class TestEdges:
         assert result[0].verdict == "unknown"
 
     def test_model_cannot_return_likely_real(self, fake_ask):
-        # likely_real is triage-only. If the model emits it, we ignore.
         _, replies = fake_ask
         findings = [_f("api_key", "AKIA1234567890ABCDEF")]
         replies.append({"judgments": [{"index": 0, "verdict": "likely_real"}]})
