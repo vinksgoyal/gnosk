@@ -57,10 +57,29 @@ guaranteed compliance is a bug; please file it.
 Run `python scripts/verify_ollama.py` to confirm the model is reachable
 before using any model-dependent commands.
 
+## Install
 
-## Install (planned)
+    git clone https://github.com/vinksgoyal/gnosk
+    cd gnosk
+    ./install.sh
 
-Not published yet. Clone and run from source once Task 2 lands.
+That's it. The script checks Python, creates a virtualenv, installs the
+package, and symlinks `gnosk` into `~/.local/bin` so you never have to
+`source` anything. Re-running is safe.
+
+Ollama is optional — the deterministic scanner works without it. To
+enable `--classify` (local model judgment):
+
+    curl -fsSL https://ollama.com/install.sh | sh
+    ollama pull gemma2:2b
+
+## Update
+
+    cd gnosk
+    git pull
+    pip install -e .
+
+(A `gnosk update` subcommand is on the roadmap.)
 
 ## Usage (planned)
 
