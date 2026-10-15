@@ -23,7 +23,7 @@ from gnosk.ui import (
 app = typer.Typer(
     name="gnosk",
     help="Know what your code knows. Offline PII scanner. Never uploads your files.",
-    no_args_is_help=True,
+    no_args_is_help=False,
     add_completion=False,
 )
 console = Console()
@@ -35,8 +35,10 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-@app.callback()
+
+@app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     version: bool = typer.Option(
         False,
         "--version",
@@ -47,6 +49,16 @@ def main(
     ),
 ) -> None:
     """Gnosk — local-first PII scanner."""
+    if ctx.invoked_subcommand is not None:
+        return
+    # No subcommand — launch the interactive wizard.
+    from gnosk.interactive import run as run_interactive
+
+    try:
+        raise typer.Exit(code=run_interactive(console))
+    except KeyboardInterrupt:
+        console.print("\n[dim]Cancelled.[/dim]")
+        raise typer.Exit(code=130) from None
 
 
 def _collect_scan(path: Path) -> tuple[list[FileFindings], float]:
