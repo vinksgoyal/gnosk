@@ -37,3 +37,4 @@ sample_data/private/
 .DS_Store
 Thumbs.db
 NOTES.md
+.install.log
