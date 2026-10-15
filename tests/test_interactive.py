@@ -1,7 +1,7 @@
-"""Tests for the interactive TUI.
+"""Tests for the interactive REPL.
 
-questionary prompts are monkeypatched, so pytest never touches a real
-terminal. The scan itself runs against a tmp_path.
+The Console is redirected to a StringIO, and `console.input` is
+monkeypatched to feed commands from a scripted list.
 """
 
 from __future__ import annotations
@@ -16,81 +16,99 @@ from gnosk import interactive
 
 @pytest.fixture
 def console():
-    return Console(file=StringIO(), force_terminal=False)
+    return Console(file=StringIO(), force_terminal=False, width=120)
 
 
-class _Stub:
-    def __init__(self, value):
-        self._value = value
+def _feed(monkeypatch, console, lines: list[str]):
+    """Replace console.input with a scripted reader."""
+    it = iter(lines)
 
-    def ask(self):
-        return self._value
+    def fake_input(prompt=""):
+        try:
+            nxt = next(it)
+        except StopIteration as exc:
+            raise EOFError from exc
+        console.file.write(prompt + nxt + "\n")
+        return nxt
 
-
-def _patch_questionary(
-    monkeypatch,
-    *,
-    folder: str | None,
-    mode: str | None = "quick",
-    confirm: bool | None = True,
-    outfile: str | None = "out.md",
-):
-    monkeypatch.setattr(interactive.questionary, "path", lambda *a, **k: _Stub(folder))
-    monkeypatch.setattr(interactive.questionary, "select", lambda *a, **k: _Stub(mode))
-    monkeypatch.setattr(
-        interactive.questionary, "confirm", lambda *a, **k: _Stub(confirm)
-    )
-    monkeypatch.setattr(interactive.questionary, "text", lambda *a, **k: _Stub(outfile))
+    monkeypatch.setattr(console, "input", fake_input)
 
 
-class TestCancelPaths:
-    def test_cancel_at_folder_prompt(self, monkeypatch, console, tmp_path):
-        _patch_questionary(monkeypatch, folder=None)
-        assert interactive.run(console) == 130
-
-    def test_cancel_at_mode_prompt(self, monkeypatch, console, tmp_path):
-        _patch_questionary(monkeypatch, folder=str(tmp_path), mode=None)
-        assert interactive.run(console) == 130
-
-    def test_missing_path_returns_1(self, monkeypatch, console, tmp_path):
-        _patch_questionary(monkeypatch, folder=str(tmp_path / "nope"))
-        assert interactive.run(console) == 1
-
-
-class TestHappyPath:
-    def test_no_findings_skips_report_prompt(self, monkeypatch, console, tmp_path):
-        (tmp_path / "clean.txt").write_text("no pii here")
-        called = {"confirm": 0}
-        original = interactive.questionary.confirm
-
-        def spy(*a, **k):
-            called["confirm"] += 1
-            return original(*a, **k)
-
-        _patch_questionary(monkeypatch, folder=str(tmp_path))
-        monkeypatch.setattr(interactive.questionary, "confirm", spy)
+class TestQuitPaths:
+    def test_quit_returns_zero(self, monkeypatch, console):
+        _feed(monkeypatch, console, ["quit"])
         assert interactive.run(console) == 0
-        assert called["confirm"] == 0
 
-    def test_writes_report_when_confirmed(self, monkeypatch, console, tmp_path):
-        (tmp_path / "x.txt").write_text("email: real@example.com")
+    def test_exit_alias(self, monkeypatch, console):
+        _feed(monkeypatch, console, ["exit"])
+        assert interactive.run(console) == 0
+
+    def test_eof_exits_cleanly(self, monkeypatch, console):
+        _feed(monkeypatch, console, [])
+        assert interactive.run(console) == 0
+
+
+class TestCommands:
+    def test_help_does_not_exit(self, monkeypatch, console):
+        _feed(monkeypatch, console, ["help", "quit"])
+        assert interactive.run(console) == 0
+        assert "scan <path>" in console.file.getvalue()
+
+    def test_unknown_command_keeps_session(self, monkeypatch, console):
+        _feed(monkeypatch, console, ["frobnicate", "quit"])
+        assert interactive.run(console) == 0
+        assert "unknown command" in console.file.getvalue()
+
+    def test_blank_line_ignored(self, monkeypatch, console):
+        _feed(monkeypatch, console, ["", "quit"])
+        assert interactive.run(console) == 0
+
+    def test_scan_missing_path(self, monkeypatch, console):
+        _feed(monkeypatch, console, ["scan /nonexistent/xyz", "quit"])
+        assert interactive.run(console) == 0
+        assert "Path not found" in console.file.getvalue()
+
+    def test_scan_clean_folder(self, monkeypatch, console, tmp_path):
+        (tmp_path / "clean.txt").write_text("nothing here")
+        _feed(monkeypatch, console, [f"scan {tmp_path}", "quit"])
+        assert interactive.run(console) == 0
+        assert "0 finding" in console.file.getvalue()
+
+    def test_scan_finds_email(self, monkeypatch, console, tmp_path):
+        (tmp_path / "x.txt").write_text("contact real@example.com")
+        _feed(monkeypatch, console, [f"scan {tmp_path}", "quit"])
+        assert interactive.run(console) == 0
+        out = console.file.getvalue()
+        assert "email" in out
+        assert "real@example.com" not in out  # redacted
+
+    def test_report_writes_files(self, monkeypatch, console, tmp_path):
+        (tmp_path / "x.txt").write_text("contact real@example.com")
         out = tmp_path / "inv.md"
-        _patch_questionary(
-            monkeypatch,
-            folder=str(tmp_path),
-            confirm=True,
-            outfile=str(out),
-        )
+        _feed(monkeypatch, console, [f"report {tmp_path} {out}", "quit"])
         assert interactive.run(console) == 0
         assert out.exists()
-        assert "Gnosk Data Inventory" in out.read_text()
-        assert (tmp_path / "inv.json").exists()
+        assert out.with_suffix(".json").exists()
 
-    def test_does_not_write_when_declined(self, monkeypatch, console, tmp_path):
-        (tmp_path / "x.txt").write_text("email: real@example.com")
+    def test_report_on_clean_folder_writes_nothing(self, monkeypatch, console, tmp_path):
+        (tmp_path / "clean.txt").write_text("nothing")
         out = tmp_path / "inv.md"
-        _patch_questionary(
-            monkeypatch, folder=str(tmp_path), confirm=False, outfile=str(out)
-        )
+        _feed(monkeypatch, console, [f"report {tmp_path} {out}", "quit"])
         assert interactive.run(console) == 0
         assert not out.exists()
+
+    def test_scan_without_args_prints_usage(self, monkeypatch, console):
+        _feed(monkeypatch, console, ["scan", "quit"])
+        assert interactive.run(console) == 0
+        assert "usage" in console.file.getvalue().lower()
+
+
+class TestCliWiring:
+    def test_gnosk_wizard_subcommand_exists(self):
+        from typer.testing import CliRunner
+
+        from gnosk.cli import app
+
+        # Just invoking --help for the subcommand path proves it's registered.
+        result = CliRunner().invoke(app, ["wizard", "--help"])
+        assert result.exit_code == 0

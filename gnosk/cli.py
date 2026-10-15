@@ -35,7 +35,6 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
@@ -51,13 +50,13 @@ def main(
     """Gnosk — local-first PII scanner."""
     if ctx.invoked_subcommand is not None:
         return
-    # No subcommand — launch the interactive wizard.
-    from gnosk.interactive import run as run_interactive
+    # No subcommand — launch the interactive REPL.
+    from gnosk.interactive import run as run_repl
 
     try:
-        raise typer.Exit(code=run_interactive(console))
+        raise typer.Exit(code=run_repl(console))
     except KeyboardInterrupt:
-        console.print("\n[dim]Cancelled.[/dim]")
+        console.print("\n[dim]bye.[/dim]")
         raise typer.Exit(code=130) from None
 
 
@@ -191,6 +190,18 @@ def report(
     json_path.write_text(json.dumps(payload, indent=2))
     console.print(f"[green]✓[/green] Wrote JSON: [bold]{json_path}[/bold]")
     console.print(f"  [dim]({elapsed:.2f}s)[/dim]")
+
+
+@app.command()
+def wizard() -> None:
+    """Prompt-driven single-shot wizard (alternative to the REPL)."""
+    from gnosk.wizard import run as run_wizard
+
+    try:
+        raise typer.Exit(code=run_wizard(console))
+    except KeyboardInterrupt:
+        console.print("\n[dim]Cancelled.[/dim]")
+        raise typer.Exit(code=130) from None
 
 
 if __name__ == "__main__":
