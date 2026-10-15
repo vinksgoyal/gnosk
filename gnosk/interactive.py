@@ -186,21 +186,28 @@ def _dispatch(console: Console, line: str) -> bool:
         files = [r for r in results if r.findings]
         if not files:
             return True
-        console.print(
-            "  [bold]Running local model classifier[/bold] "
-            "[dim](~2 min per file on CPU)[/dim]"
-        )
+
+
+        console.print("  [bold]Classifying[/bold]")
         verdicts: dict[str, int] = {}
+        sources: dict[str, int] = {}
         for r in files:
             console.print(f"  [dim]classifying {r.count} finding(s) in {r.path}…[/dim]")
             text = r.path.read_text(errors="replace")
             for cf in classify_findings(str(r.path), text, r.findings):
                 verdicts[cf.verdict] = verdicts.get(cf.verdict, 0) + 1
+                sources[cf.source] = sources.get(cf.source, 0) + 1
         console.print()
+        console.print("  [bold]Verdicts:[/bold]")
         for v in sorted(verdicts):
             console.print(f"    {v}: {verdicts[v]}")
         console.print()
+        console.print("  [bold]Decided by:[/bold]")
+        for s in sorted(sources):
+            console.print(f"    {s}: {sources[s]}")
+        console.print()
         return True
+
 
     # If the first token is a path that exists, treat it as `scan <path>`.
     as_path = Path(line.strip()).expanduser()

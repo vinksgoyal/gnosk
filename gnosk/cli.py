@@ -128,6 +128,7 @@ def scan(
 
     if classify:
         verdicts: dict[str, int] = {}
+        sources: dict[str, int] = {}
         for r in results:
             if not r.findings:
                 continue
@@ -135,11 +136,16 @@ def scan(
             text = r.path.read_text(errors="replace")
             for cf in classify_findings(str(r.path), text, r.findings):
                 verdicts[cf.verdict] = verdicts.get(cf.verdict, 0) + 1
+                sources[cf.source] = sources.get(cf.source, 0) + 1
         if verdicts:
             console.print()
-            console.print("[bold]Classifier verdicts:[/bold]")
+            console.print("[bold]Verdicts:[/bold]")
             for v in sorted(verdicts):
                 console.print(f"  {v}: {verdicts[v]}")
+            console.print()
+            console.print("[bold]Decided by:[/bold]")
+            for s in sorted(sources):
+                console.print(f"  {s}: {sources[s]}")
 
 
 @app.command()
