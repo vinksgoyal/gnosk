@@ -92,19 +92,43 @@ def scan(text: str) -> list[Finding]:
     the checksum get confidence 0.3 and a note — they are surfaced on
     purpose so a human can investigate near-misses.
     """
+
+
+
+
+
     out: list[Finding] = []
     for start, end, value in find_aadhaar_candidates(text):
         ok = _verhoeff_is_valid(value)
+        if ok:
+            out.append(
+                Finding(
+                    category="aadhaar",
+                    value=value,
+                    start=start,
+                    end=end,
+                    confidence=1.0,
+                    source=SOURCE_VALIDATOR,
+                    validator="aadhaar.verhoeff",
+                    notes=None,
+                )
+            )
+            continue
+        # Checksum failed. Before reporting a near-miss, sanity-check the
+        # digit distribution: a real Aadhaar won't have 5+ zeros, but
+        # fractional prices and float artifacts in JSON do.
+        if value.count("0") >= 5:
+            continue
         out.append(
             Finding(
                 category="aadhaar",
                 value=value,
                 start=start,
                 end=end,
-                confidence=1.0 if ok else 0.3,
+                confidence=0.3,
                 source=SOURCE_VALIDATOR,
                 validator="aadhaar.verhoeff",
-                notes=None if ok else "checksum failed; possible near-miss",
+                notes="checksum failed; possible near-miss",
             )
         )
     return out

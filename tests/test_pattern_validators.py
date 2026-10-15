@@ -108,3 +108,44 @@ class TestSecrets:
 
     def test_rejects_non_string(self):
         assert secrets.scan(None) == []  # type: ignore[arg-type]
+
+
+class TestPhoneEntropyFilter:
+    """Low-entropy 10-digit runs (5+ zeros) are not reported as phones."""
+
+    def test_fractional_price_fragment_rejected(self):
+        # The kind of value produced by OpenRouter's per-token prices.
+        assert phone.scan("price: 0.0000008125") == []
+
+    def test_long_zero_suffix_rejected(self):
+        assert phone.scan("id 6468000000") == []
+
+    def test_leading_trunk_zero_rejected(self):
+        # 07854000000 -> payload 7854000000, 6 zeros -> rejected.
+        assert phone.scan("07854000000") == []
+
+    def test_real_number_with_two_zeros_still_found(self):
+        # 9800012345 has 3 zeros. Fine.
+        findings = phone.scan("call 9800012345")
+        assert len(findings) == 1
+        assert findings[0].category == "phone_in"
+
+    def test_real_number_with_four_zeros_still_found(self):
+        # 9800012340 has exactly 4 zeros. 4 < 5, so it survives.
+        assert len(phone.scan("9800012340")) == 1
+
+
+class TestAadhaarEntropyFilter:
+    def test_float_artifact_near_miss_rejected(self):
+        # 12 digits, fails checksum, 6 zeros -> suppressed.
+        from gnosk.validators import aadhaar
+
+        assert aadhaar.scan("value 234375000000") == []
+
+    def test_real_near_miss_still_reported(self):
+        # Fails checksum but has only 1 zero -> keep as low-confidence.
+        from gnosk.validators import aadhaar
+
+        findings = aadhaar.scan("ID 234567890123")
+        assert len(findings) == 1
+        assert findings[0].confidence == 0.3

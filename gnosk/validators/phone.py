@@ -34,9 +34,28 @@ def find_phone_candidates(text: str) -> list[tuple[int, int, str]]:
     return [(m.start(), m.end(), m.group(0)) for m in _PHONE_RE.finditer(text)]
 
 
+
+
+
+
+def _zero_count(digits: str) -> int:
+    return digits.count("0")
+
+
 def scan(text: str) -> list[Finding]:
     out: list[Finding] = []
     for start, end, value in find_phone_candidates(text):
+        # Isolate the 10-digit payload, stripping separators and any
+        # country code / trunk zero.
+        digits = value.replace(" ", "").replace("-", "").replace("+91", "")
+        if digits.startswith("0"):
+            digits = digits[1:]
+        # A real Indian mobile number almost never has 5 or more zeros.
+        # Number-shaped strings inside machine-generated JSON (per-token
+        # prices like 0.0000008125, IEEE-754 fractions) do this
+        # constantly. Drop them rather than report them as low-confidence.
+        if _zero_count(digits) >= 5:
+            continue
         out.append(
             Finding(
                 category="phone_in",

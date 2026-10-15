@@ -83,3 +83,17 @@ def test_findings_sorted_by_offset(tmp_path: Path) -> None:
     result = scan_file(f)
     starts = [x.start for x in result.findings]
     assert starts == sorted(starts)
+
+
+def test_scanner_skips_tool_directories(tmp_path: Path) -> None:
+    """Tool-generated session dirs and caches must not be walked."""
+    for d in (".backboard", ".cache"):
+        sub = tmp_path / d / "nested"
+        sub.mkdir(parents=True)
+        (sub / "log.jsonl").write_text('"price": "0.0000008125"')
+    (tmp_path / "real.py").write_text("EMAIL = 'real@client.com'")
+
+    results = list(scan_path(tmp_path))
+    names = [r.path.name for r in results]
+    assert "log.jsonl" not in names
+    assert "real.py" in names

@@ -32,6 +32,10 @@ _SKIP_DIRS = frozenset({
     ".idea", ".vscode",
     "vendor",
     "coverage", "htmlcov",
+    # Tool-generated session logs and caches. These contain machine
+    # output (JSON dumps, model metadata, checksums) that produces
+    # constant false positives and never contains user PII.
+    ".backboard", ".cache", ".sessions",
 })
 
 _SKIP_EXTS = frozenset({
