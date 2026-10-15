@@ -112,3 +112,11 @@ class TestCliWiring:
         # Just invoking --help for the subcommand path proves it's registered.
         result = CliRunner().invoke(app, ["wizard", "--help"])
         assert result.exit_code == 0
+
+
+def test_naked_path_runs_scan(monkeypatch, console, tmp_path):
+    (tmp_path / "x.txt").write_text("email: real@example.com")
+    _feed(monkeypatch, console, [str(tmp_path), "quit"])
+    assert interactive.run(console) == 0
+    out = console.file.getvalue()
+    assert "email" in out

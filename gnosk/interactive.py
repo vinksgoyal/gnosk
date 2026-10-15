@@ -202,8 +202,14 @@ def _dispatch(console: Console, line: str) -> bool:
         console.print()
         return True
 
+    # If the first token is a path that exists, treat it as `scan <path>`.
+    as_path = Path(line.strip()).expanduser()
+    if as_path.exists():
+        return _dispatch(console, f"scan {line.strip()}")
+
     console.print(f"  [red]unknown command:[/red] {cmd}  (try `help`)")
     return True
+
 
 
 def run(console: Console) -> int:
