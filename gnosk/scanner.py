@@ -46,7 +46,31 @@ _SKIP_EXTS = frozenset({
 })
 
 _MAX_FILE_BYTES = 5 * 1024 * 1024
+# Context filter: a 32+ char run of hex is structural (a hash, a lock
+# file checksum, a git SHA), never PII. Findings that sit inside such a
+# run are suppressed before they reach the report.
+_HEX_CHARS = frozenset("0123456789abcdefABCDEF")
+_HEX_MIN_RUN = 32
 
+
+def _is_inside_hex_run(text: str, start: int, end: int) -> bool:
+    """True if [start, end) is entirely hex and sits inside a >=32-char hex run.
+
+    The span itself must consist only of hex characters — a matched
+    value like `ghp_AAAA...` contains non-hex chars (`g`, `h`, `p`, `_`)
+    and is therefore not a hex-run finding, even if the surrounding
+    bytes happen to be hex.
+    """
+    for i in range(start, end):
+        if text[i] not in _HEX_CHARS:
+            return False
+    left = start
+    while left > 0 and text[left - 1] in _HEX_CHARS:
+        left -= 1
+    right = end
+    while right < len(text) and text[right] in _HEX_CHARS:
+        right += 1
+    return (right - left) >= _HEX_MIN_RUN
 
 @dataclass(slots=True)
 class FileFindings:
@@ -88,6 +112,7 @@ def _line_of(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
 
+
 def scan_file(path: Path) -> FileFindings:
     """Run every validator against a single file. Never raises on I/O."""
     result = FileFindings(path=path)
@@ -96,6 +121,11 @@ def scan_file(path: Path) -> FileFindings:
         return result
     for validator in _VALIDATORS:
         result.findings.extend(validator.scan(text))
+    # Drop findings sitting inside hex-hash runs — they are structural,
+    # not PII. See _is_inside_hex_run for the rationale.
+    result.findings = [
+        f for f in result.findings if not _is_inside_hex_run(text, f.start, f.end)
+    ]
     result.findings = [
         replace(f, line=_line_of(text, f.start)) for f in result.findings
     ]
