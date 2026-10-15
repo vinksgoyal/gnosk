@@ -78,7 +78,7 @@ def _print_summary(
     by_category: dict[str, int],
 ) -> None:
     total = sum(by_category.values())
-    check = "[green]✓[/green]" if not total else "[yellow]![/yellow]"
+    check = "[green]✓[/green]" if not total else "[bold yellow]![/bold yellow]"
     console.print(
         f"{check} Scanned [bold]{len(results)}[/bold] file(s) "
         f"in [bold]{elapsed:.2f}s[/bold]"
