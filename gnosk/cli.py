@@ -192,6 +192,8 @@ def report(
     console.print(f"  [dim]({elapsed:.2f}s)[/dim]")
 
 
+
+
 @app.command()
 def wizard() -> None:
     """Prompt-driven single-shot wizard (alternative to the REPL)."""
@@ -202,6 +204,14 @@ def wizard() -> None:
     except KeyboardInterrupt:
         console.print("\n[dim]Cancelled.[/dim]")
         raise typer.Exit(code=130) from None
+
+
+@app.command()
+def update() -> None:
+    """Pull the latest Gnosk from git and reinstall."""
+    from gnosk.update import run as run_update
+
+    raise typer.Exit(code=run_update(console))
 
 
 if __name__ == "__main__":
