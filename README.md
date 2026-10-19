@@ -1,5 +1,7 @@
 # Gnosk
 
+> Built for the [Hacktoberfest Open-Source AI Challenge Week 2](https://dev.to/challenges/hacktoberfest-week2-2026-10-12). [Read the write-up →](https://dev.to/vinksgoyal/gnosk-know-what-your-code-knows-cgd)
+
 **Know what your code knows.**
 
 Offline PII scanner for freelance devs and small agencies. Scans a
